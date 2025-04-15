@@ -1,0 +1,12 @@
+# Ignore log files
+*.log
+
+# Ignore IntelliJ IDEA module files
+*.iml
+.idea/
+
+# Ignore build output directory
+/out
+
+# Ignore macOS system files
+.DS_Store

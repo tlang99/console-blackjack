@@ -1,71 +1,39 @@
-import java.io.InputStream;
-import java.util.logging.*;
+import java.io.IOException;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
-/**
- * Provides utility methods for configuring and using Java's built-in logging system. This class simplifies logging
- * setup by automatically loading configuration from a logging.properties file, and provides convenience methods to log
- * messages at different levels.
- *
- * @author Tyler Lang
- * @version 2025.04.03
- */
 public class LogHelper
 {
-    private final Logger logger;
-
-    /**
-     * Constructs a LogHelper instance, initializing the logger and loading logging configuration from
-     * logging.properties.
-     */
-    public LogHelper(Class<?> clazz)
+    public static Logger getLogger(Class<?> clazz)
     {
-        getLoggingProperties();
-        logger = Logger.getLogger("LogHelper");
-    }
+        Logger logger = Logger.getLogger(clazz.getName());
+        boolean hasFileHandler = false;
 
-    /**
-     * Loads the logging configuration from a logging.properties file located in the classpath. Configures the root
-     * LogManager with these settings.
-     */
-    private void getLoggingProperties()
-    {
-        // Read logging properties from the file
-        try (InputStream is = this.getClass().getClassLoader().getResourceAsStream("logging.properties"))
+        for (Handler handler : logger.getHandlers())
         {
-            LogManager.getLogManager().readConfiguration(is);
+            if (handler instanceof FileHandler)
+            {
+                hasFileHandler = true;
+                break;
+            }
         }
-        catch (Exception e)
+        if (!hasFileHandler)
         {
-            e.printStackTrace();
+            try
+            {
+                Handler fileHandler = new FileHandler("blackjack.log", 0, 1, true);
+                fileHandler.setFormatter(new SimpleFormatter());
+                logger.addHandler(fileHandler);
+                logger.setUseParentHandlers(false);
+            }
+            catch (IOException e)
+            {
+                System.err.println("Could not create log file: " + e.getMessage());
+            }
         }
-    }
 
-    /**
-     * Logs an informational message using the INFO level.
-     *
-     * @param message The message to log.
-     */
-    public void logInfoMessage(String message)
-    {
-        logger.log(Level.INFO, message);
-    }
-
-    /**
-     * Logs a warning message using the WARNING level.
-     *
-     * @param message The message to log.
-     */
-    public void logWarningMessage(String message)
-    {
-        logger.log(Level.WARNING, message);
-    }
-
-    /**
-     *
-     * @param message
-     */
-    public void logSevereMessage(String message)
-    {
-        logger.log(Level.SEVERE, message);
+        return logger;
     }
 }

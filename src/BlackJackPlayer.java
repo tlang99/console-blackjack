@@ -68,8 +68,22 @@ public class BlackJackPlayer extends Player
 
     public boolean hasBlackJack()
     {
-        ArrayList<Card> hand = getHand();
+        ArrayList<Card> hand = super.getHand();
+        int score = 0;
 
-        return hand.size() == 2 && scoreHand() == 21;
+        if(hand.size() == 2)
+        {
+            for(Card card : hand)
+            {
+                score += card.getValue();
+
+                if(card.getName().toLowerCase().contains("ace") && score == 21)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

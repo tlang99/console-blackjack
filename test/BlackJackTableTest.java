@@ -243,7 +243,7 @@ public class BlackJackTableTest
         dealer.setStash(dealer.getStash() - 10);
         table.setPot(20);
         dealer.showAllCards();
-        table.hit();
+        table.scoreGame();
 
         // Assert
         assertTrue(dealer.getStash() == (dealerStartStash + 10));

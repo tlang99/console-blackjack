@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.logging.Logger;
 
 /**
  * An abstract class representing a generic player in a card game. Provides core functionality such as managing the
@@ -14,7 +15,7 @@ public abstract class Player
     private String name;
     private ArrayList<Card> hand;
     private int stash;
-    private LogHelper logHelper;
+    private static final Logger log = LogHelper.getLogger(Player.class);
 
     /**
      * Constructs a default Player with the name "Player", an empty hand,
@@ -24,7 +25,6 @@ public abstract class Player
     {
         name = "Player";
         hand = new ArrayList<>();
-        logHelper = new LogHelper(Player.class);
 
         try
         {
@@ -32,7 +32,7 @@ public abstract class Player
         }
         catch (Exception e)
         {
-            logHelper.logWarningMessage(e.getMessage());
+            log.warning(e.getMessage());
         }
     }
 
@@ -54,7 +54,7 @@ public abstract class Player
         }
         catch (Exception e)
         {
-            logHelper.logWarningMessage(e.getMessage());
+            log.warning(e.getMessage());
         }
     }
 

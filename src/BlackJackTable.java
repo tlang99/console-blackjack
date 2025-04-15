@@ -1,6 +1,7 @@
 import java.util.InputMismatchException;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  * Represents the table in a game of Blackjack, where the main gameplay occurs. Handles player interaction, betting
@@ -18,10 +19,10 @@ public class BlackJackTable implements CardGame
     private int bet;
     private int dealerBet;
     private int pot;
-    private LogHelper logHelper;
     private int roundTracker;
     private double playerWins;
     private double playerLosses;
+    private final static Logger log = LogHelper.getLogger(BlackJackTable.class);
 
     /**
      * Constructs a new Table with input handling and logging initialized.
@@ -35,7 +36,6 @@ public class BlackJackTable implements CardGame
         pot = 0;
         roundTracker = 0;
         scanner = new Scanner(System.in);
-        logHelper = new LogHelper(BlackJackTable.class);
     }
 
     /**
@@ -149,7 +149,7 @@ public class BlackJackTable implements CardGame
      *
      * @param dealerBet the amount the dealer is betting
      */
-    public void setDealerBet(int dealerBet) throws IllegalBetException
+    public void setDealerBet(int dealerBet)
     {
         this.dealerBet = dealerBet;
     }
@@ -189,12 +189,12 @@ public class BlackJackTable implements CardGame
 
                 player.setStash(player.getStash() - bet);
                 System.out.println("You bet $" + bet);
-                logHelper.logInfoMessage("Player bet $" + bet);
+                log.info("Player bet $" + bet);
 
                 if (dealer.getStash() >= bet)
                 {
                     System.out.println("The dealer matches your bet");
-                    logHelper.logInfoMessage("Dealer matches player's bet of $" + bet);
+                    log.info("Dealer matches player's bet of $" + bet);
 
                     dealerBet = bet;
                     pot = bet + dealerBet;
@@ -203,7 +203,7 @@ public class BlackJackTable implements CardGame
                 else
                 {
                     System.out.println("The dealer goes all in!");
-                    logHelper.logInfoMessage("Dealer goes all in with $" + dealerBet);
+                    log.info("Dealer goes all in with $" + dealerBet);
 
                     dealerBet = dealer.getStash();
                     pot = bet + dealerBet;
@@ -211,25 +211,24 @@ public class BlackJackTable implements CardGame
                 }
 
                 System.out.println("The total pot is now $" + pot + "\n");
-                logHelper.logInfoMessage("User made a bet");
+                log.info("User made a bet");
                 running = false;
             }
             catch (IllegalBetException e)
             {
                 System.err.println(e.getMessage());
-                logHelper.logWarningMessage(e.getMessage());
+                log.warning(e.getMessage());
             }
             catch (InputMismatchException e)
             {
                 System.err.println("Please enter a whole number without any characters");
-                logHelper.logWarningMessage(e.getMessage());
+                log.warning(e.getMessage());
                 scanner.nextLine();
-                continue;
             }
             catch (Exception e)
             {
                 System.err.println("An unexpected error occurred");
-                logHelper.logSevereMessage(e.getMessage());
+                log.severe(e.getMessage());
                 System.exit(1);
             }
         }
@@ -254,13 +253,15 @@ public class BlackJackTable implements CardGame
             boolean roundResolved = false;
             takeBets();
             roundStartDeal();
-            printPlayers();
 
             if(player.hasBlackJack() || dealer.hasBlackJack())
             {
-                roundResolved = true;
                 scoreGame();
+                startNextRound();
+                continue;
             }
+
+            printPlayers();
 
             System.out.println("Please enter one of the following:");
             System.out.println("* Stay");
@@ -286,15 +287,9 @@ public class BlackJackTable implements CardGame
 
             if(userInput.equals("double down"))
             {
-                try
+                if(doubleDown())
                 {
-                    int previousBet = getBet();
-
-                    player.setStash(player.getStash() - previousBet);
-                    setBet(getBet() * 2);
-                    setPot(getPot() + previousBet);
-
-                    System.out.println("Player doubles down!");
+                    System.out.println("Player doubles down!\n");
 
                     player.receiveCard(dealer.deal(), true);
                     printPlayers();
@@ -303,15 +298,30 @@ public class BlackJackTable implements CardGame
                     {
                         roundResolved = true;
                         scoreGame();
+                        startNextRound();
                     }
 
                     userInput = "stay";
                 }
-                catch (IllegalBetException e)
+                else
                 {
-                    System.err.println("You don't have enough money to double down!");
-                    System.out.println("Would you like to hit, stay or surrender instead?");
-                    userInput = scanner.nextLine().toLowerCase().trim();
+                    System.out.println("Player doesn't have enough money to double down!");
+                    System.out.println("You can still stay, hit or surrender");
+
+                    while(true)
+                    {
+                        Set<String> validInputs = Set.of("stay", "hit", "surrender");
+                        userInput = scanner.nextLine().toLowerCase().trim();
+
+                        if(!validInputs.contains(userInput))
+                        {
+                            System.err.println("Please enter a valid option");
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
                 }
             }
             if (userInput.equals("hit"))
@@ -321,7 +331,7 @@ public class BlackJackTable implements CardGame
                 while (isHit)
                 {
                     player.receiveCard(dealer.deal(), true);
-                    logHelper.logInfoMessage("Player chooses to hit");
+                    log.info("Player chooses to hit");
                     printPlayers();
 
                     if (player.scoreHand() > 21)
@@ -329,6 +339,7 @@ public class BlackJackTable implements CardGame
                         roundResolved = true;
                         isHit = false;
                         scoreGame();
+                        startNextRound();
                     }
                     else
                     {
@@ -368,7 +379,7 @@ public class BlackJackTable implements CardGame
                 {
                     Card card = dealer.deal();
                     dealer.receiveCard(card, true);
-                    logHelper.logInfoMessage("Dealer draws a " + dealer.getHand().getLast().toString());
+                    log.info("Dealer draws a " + dealer.getHand().getLast().toString());
                     System.out.println("Dealer draws a " + dealer.getHand().getLast().toString());
                 }
 
@@ -376,11 +387,13 @@ public class BlackJackTable implements CardGame
                 {
                     roundResolved = true;
                     scoreGame();
+                    startNextRound();
                 }
             }
             if(!roundResolved)
             {
                 scoreGame();
+                startNextRound();
             }
         }
         while (running);
@@ -417,8 +430,8 @@ public class BlackJackTable implements CardGame
         if(player.hasBlackJack())
         {
             System.out.println("Player has a Blackjack!");
-            logHelper.logInfoMessage("Player receives the pot of $" + getPot());
-            System.out.println("Player received $" + getPot() + "\n");
+            System.out.println("Player receives the pot of $" + getPot() + "\n");
+            log.info("Player received $" + getPot());
             player.setStash(player.getStash() + pot);
             setPot(0);
             playerWins++;
@@ -426,8 +439,8 @@ public class BlackJackTable implements CardGame
         else if(dealer.hasBlackJack())
         {
             System.out.println("Dealer has a Blackjack!");
-            logHelper.logInfoMessage("Dealer receives the pot of $" + getBet() + "\n");
-            dealer.showAllCards();
+            System.out.println("Dealer receives the pot of $" + getPot() + "\n");
+            log.info("Dealer receives the pot of $" + getBet() + "\n");
             dealer.setStash(dealer.getStash() + getBet());
             setPot(0);
             playerLosses++;
@@ -436,11 +449,11 @@ public class BlackJackTable implements CardGame
         else if(player.scoreHand() == dealer.scoreHand() || player.hasBlackJack() && dealer.hasBlackJack())
         {
             System.out.println("Push! Both the player and the dealer have " + player.scoreHand() + " points!");
-            logHelper.logInfoMessage("Push: both player and dealer have " + player.scoreHand());
+            log.info("Push: both player and dealer have " + player.scoreHand());
             System.out.println("Returning bets... \n");
 
             System.out.println("Player receives $" + getBet());
-            logHelper.logInfoMessage("Refunding bet of $" + getBet() + " to player and $" + dealerBet + " to dealer.");
+            log.info("Refunding bet of $" + getBet() + " to player and $" + dealerBet + " to dealer.");
             player.setStash(player.getStash() + getBet());
 
             System.out.println("Dealer receives $" + dealerBet + "\n");
@@ -453,7 +466,7 @@ public class BlackJackTable implements CardGame
             System.out.println("Player busts!");
             System.out.println("Player Score: " + player.scoreHand());
             System.out.println("Dealer receives the pot of $" + getPot() + "\n");
-            logHelper.logInfoMessage("Player busts with score " + player.scoreHand());
+            log.info("Player busts with score " + player.scoreHand());
             dealer.setStash(dealer.getStash() + getPot());
             setPot(0);
             playerLosses++;
@@ -461,7 +474,7 @@ public class BlackJackTable implements CardGame
         else if(dealer.scoreHand() > 21)
         {
             System.out.println("Dealer busts!");
-            logHelper.logInfoMessage("Dealer score: " + dealer.scoreHand());
+            log.info("Dealer score: " + dealer.scoreHand());
             System.out.println("Player receives the pot of $" + getPot() + "\n");
             player.setStash(player.getStash() + pot);
             setPot(0);
@@ -471,7 +484,7 @@ public class BlackJackTable implements CardGame
         {
             System.out.println("Player wins with " + player.scoreHand() + " points!");
             System.out.println("Player receives the pot of $" + getPot() + "\n");
-            logHelper.logInfoMessage("Player wins with " + player.scoreHand() + " vs dealer " + dealer.scoreHand());
+            log.info("Player wins with " + player.scoreHand() + " vs dealer " + dealer.scoreHand());
             player.setStash(player.getStash() + pot);
             setPot(0);
             playerWins++;
@@ -480,13 +493,16 @@ public class BlackJackTable implements CardGame
         {
             System.out.println("Dealer wins with " + dealer.scoreHand() + " points!");
             System.out.println("Dealer receives the pot of $" + getPot() + "\n");
-            logHelper.logInfoMessage("Dealer wins with " + dealer.scoreHand() + " vs player " + player.scoreHand());
+            printPlayers();
+            log.info("Dealer wins with " + dealer.scoreHand() + " vs player " + player.scoreHand());
             dealer.setStash(dealer.getStash() + getPot());
             setPot(0);
             playerLosses++;
         }
 
-        startNextRound();
+        System.out.println("Final score:\n");
+        dealer.showAllCards();
+        printPlayers();
     }
 
     /**
@@ -500,48 +516,53 @@ public class BlackJackTable implements CardGame
         if(player.getStash() == 0)
         {
             System.out.println("Player has no money remaining to continue. Game over!");
+            log.info("Player ran out of money. Game over.");
             System.exit(0);
         }
         if(dealer.getStash() == 0)
         {
             System.out.println("Dealer has no money remaining to continue. You win!");
+            log.info("Dealer ran out of money. Player wins the game.");
             System.exit(0);
         }
 
         roundTracker++;
         printMainMenu();
 
-        System.out.println("Would you like to play another round?");
-
         try
         {
-            String response = scanner.nextLine().toLowerCase().trim();
+            while(true)
+            {
+                System.out.println("Would you like to play another round?");
+                String response = scanner.nextLine().toLowerCase().trim();
 
-            if(response.equals("yes"))
-            {
-                System.out.println("Starting next round...\n");
-                logHelper.logInfoMessage("Player chooses to continue.");
+                if(response.equals("yes"))
+                {
+                    System.out.println("Starting next round...\n");
+                    log.info("Player chooses to continue.");
 
-                player.clearHand();
-                dealer.clearHand();
-                dealer.resetDeck();
-            }
-            else if(response.equals("no"))
-            {
-                System.out.println("Thanks for playing!");
-                logHelper.logInfoMessage("Player chooses to exit the game.");
-                System.exit(1);
-            }
-            else
-            {
-                System.err.println("Please enter a valid option.");
-                logHelper.logWarningMessage("Invalid input during next round prompt.");
+                    player.clearHand();
+                    dealer.clearHand();
+                    dealer.resetDeck();
+                    break;
+                }
+                else if(response.equals("no"))
+                {
+                    System.out.println("Thanks for playing!");
+                    log.info("Player chooses to exit the game.");
+                    System.exit(1);
+                }
+                else
+                {
+                    System.err.println("Please enter a valid option.");
+                    log.warning("Invalid input during next round prompt.");
+                }
             }
         }
         catch(Exception e)
         {
             System.err.println("An unexpected error occurred.");
-            logHelper.logSevereMessage(e.getMessage());
+            log.severe(e.getMessage());
         }
     }
 
@@ -550,23 +571,47 @@ public class BlackJackTable implements CardGame
         if(roundTracker == 0)
         {
             System.out.println("Welcome to the game!");
+            log.info("Game started.");
         }
         else
         {
             System.out.println("Round over!");
+            log.info("Round " + roundTracker + " completed.");
         }
 
         System.out.println("Rounds played: " + roundTracker);
 
         if(playerLosses == 0)
         {
-            System.out.println("W/L Ratio: " + playerWins);
+            System.out.println("W/L Ratio: " + (double) playerWins);
         }
         else
         {
-            System.out.printf("W/L Ratio: %.2f%n", playerWins / playerLosses);
+            System.out.printf("W/L Ratio: %.2f%n",(double) playerWins / playerLosses);
         }
 
         System.out.println("Money remaining: $" + player.getStash() + "\n");
+    }
+
+    /**
+     * Helper method to assist with the logic for doubling down
+     * @return true if the player has enough in their stash to double down, false otherwise.
+     */
+    public boolean doubleDown()
+    {
+        if(player.getStash() >= getBet())
+        {
+            int previousBet = getBet();
+            int newBet = previousBet * 2;
+
+            bet = newBet;
+            setPot(getPot() + newBet - previousBet);
+            player.setStash(player.getStash() - previousBet);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 }

@@ -1,0 +1,16 @@
+Apr 14, 2025 6:17:10 PM LogHelper logInfoMessage
+INFO: User started a game.
+Apr 14, 2025 6:17:10 PM LogHelper logSevereMessage
+SEVERE: null
+Apr 14, 2025 6:24:27 PM LogHelper logInfoMessage
+INFO: User started a game.
+Apr 14, 2025 6:24:31 PM LogHelper logInfoMessage
+INFO: User made a bet
+Apr 14, 2025 6:27:13 PM LogHelper logWarningMessage
+WARNING: Bet cannot be a number greater than the current amount in the player's stash
+Apr 14, 2025 6:27:29 PM LogHelper logInfoMessage
+INFO: User made a bet
+Apr 14, 2025 6:29:27 PM LogHelper logWarningMessage
+WARNING: User entered an input that was not an integer.
+Apr 14, 2025 6:29:27 PM LogHelper logSevereMessage
+SEVERE: null
